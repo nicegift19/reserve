@@ -60,6 +60,10 @@ describe('외부 링크', () => {
       expect(a).toMatch(/rel="[^"]*noopener/);
     });
   });
+  it('외부 스크립트·스타일시트·폰트를 불러오지 않는다 (CSP self)', () => {
+    const ext = [...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="(https?:)?\/\/[^"]*"[^>]*>/g)].map(m => m[0]);
+    expect(ext).toEqual([]);
+  });
   it('출처 목록 렌더러가 target·rel을 붙인다', () => {
     expect(uiCode).toMatch(/class="ext" href="\$\{s\.url\}" target="_blank" rel="noopener"/);
   });
