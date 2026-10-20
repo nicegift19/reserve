@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "상비예비군 대체 분석 — 정적 웹사이트",
+  "description": "상비예비군 전투력 비용분석 — 정적 웹사이트",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

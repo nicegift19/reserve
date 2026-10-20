@@ -1,4 +1,6 @@
-# 상비예비군 대체 분석 (sangbi-reserve-web)
+# 상비예비군 전투력 비용분석 (sangbi-reserve-web)
+
+배포: https://reserve-one-zeta.vercel.app/
 
 동원사단 보병대대 현역 결원을 상비예비군(30·60·90·180일형)으로 대체할 때의 임무수행 능력, 비용, 필요 인원, 최적 조합을 분석하는 정적 웹사이트.
 
