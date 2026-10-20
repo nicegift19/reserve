@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>상비예비군 대체 분석</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&family=Nanum+Myeongjo:wght@700;800&display=swap">
+<style>
+/* Layout: 보고서형 단일 컬럼(68ch) + 계산기 구간만 2열 확장. 결론 먼저, 근거(출처·계산식)는 각주와 하단 부록으로. */
+:root{
+  --bg:#f3f4ef; --surface:#fbfbf8; --ink:#1d2320; --muted:#5b645d; --line:#d5d9cf;
+  --olive:#3d4a36; --brass:#9a6b12; --brass-soft:#f1e5c8;
+  --good:#2f6b45; --warn:#9a5b10; --bad:#a3352b;
+  --s1:#3d4a36; --s2:#6f7f52; --s3:#a99752; --s4:#c9b98a; --act:#7b3f2c;
+  --f-display:"Nanum Myeongjo","Batang",serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151916; --surface:#1d221e; --ink:#e7e9e2; --muted:#a2aa9f; --line:#343b35;
+  --olive:#b8c6a4; --brass:#e0b45c; --brass-soft:#3a3020;
+  --good:#7fc495; --warn:#e2a35a; --bad:#ef8a7e;
+  --s1:#b8c6a4; --s2:#8fa16c; --s3:#c9b46a; --s4:#7d7356; --act:#d98a6c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151916; --surface:#1d221e; --ink:#e7e9e2; --muted:#a2aa9f; --line:#343b35;
+  --olive:#b8c6a4; --brass:#e0b45c; --brass-soft:#3a3020;
+  --good:#7fc495; --warn:#e2a35a; --bad:#ef8a7e;
+  --s1:#b8c6a4; --s2:#8fa16c; --s3:#c9b46a; --s4:#7d7356; --act:#d98a6c; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.7;word-break:keep-all}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.col{max-width:68ch}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.3;margin:0}
+h1{font-size:clamp(28px,5vw,46px);font-weight:800}
+h2{font-size:clamp(22px,3.2vw,30px);font-weight:800}
+h3{font-size:18px;font-family:var(--f-body);font-weight:700}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;color:var(--brass);text-transform:uppercase}
+section{padding-block:56px;border-top:1px solid var(--line);scroll-margin-top:12px}
+section>.wrap{display:grid;gap:20px}
+.lede{color:var(--muted);font-size:17px}
+a{color:var(--olive);text-underline-offset:3px}
+/* citations */
+a.cite{font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--brass);text-decoration:none;vertical-align:super;line-height:0;padding:0 1px}
+a.cite:hover{text-decoration:underline}
+.badge{display:inline-block;font-family:var(--f-mono);font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;line-height:1.6}
+.badge.ok{color:var(--good)} .badge.sec{color:var(--warn)} .badge.asm{color:var(--muted)}
+/* hero */
+header.hero{padding-block:56px 40px}
+header.hero .wrap{display:grid;gap:22px}
+.stamp{display:inline-flex;gap:10px;align-items:center;font-family:var(--f-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 10px;border-radius:2px;width:fit-content;max-width:100%;flex-wrap:wrap}
+.stamp b{color:var(--brass);font-weight:600}
+.ratio{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));border:1px solid var(--line);background:var(--surface)}
+.ratio>div{padding:18px 20px;border-right:1px solid var(--line);display:grid;gap:4px;min-width:0}
+.ratio>div:last-child{border-right:0}
+.ratio .k{font-size:13px;color:var(--muted)}
+.ratio .v{font-family:var(--f-mono);font-size:30px;font-weight:600;line-height:1.2}
+.ratio .v small{font-size:14px;color:var(--muted);font-weight:400}
+.ratio .n{font-size:13px;color:var(--muted)}
+.ratio .best .v{color:var(--good)}
+.answer{font-size:18px;max-width:68ch}
+.answer strong{background:var(--brass-soft);padding:0 4px}
+.jump{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px}
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:680px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left}
+thead th{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em;background:var(--bg)}
+tbody tr:last-child td{border-bottom:0}
+tr.act td{color:var(--act)}
+.note{font-size:13px;color:var(--muted)}
+/* frame */
+.frame{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.box{border:1px solid var(--line);background:var(--surface);padding:18px 20px;display:grid;gap:8px;align-content:start;min-width:0}
+.box .tag{font-family:var(--f-mono);font-size:12px;color:var(--brass)}
+.formula{font-family:var(--f-mono);font-size:14px;background:var(--surface);border:1px dashed var(--line);padding:14px 16px;overflow-x:auto;white-space:nowrap}
+/* method steps */
+.steps{display:grid;gap:0;border:1px solid var(--line);background:var(--surface)}
+.step{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step .no{font-family:var(--f-mono);font-size:13px;color:var(--brass);font-weight:600;padding-top:2px}
+.step .body{display:grid;gap:8px;min-width:0}
+.step code,.calc-ex{font-family:var(--f-mono);font-size:13px;background:var(--bg);border:1px solid var(--line);padding:8px 10px;display:block;overflow-x:auto;white-space:pre}
+/* chart */
+.chart{border:1px solid var(--line);background:var(--surface);padding:18px 16px 8px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.chart text{fill:var(--ink);font-family:var(--f-body);font-size:13px}
+.chart .axis{fill:var(--muted);font-size:11px;font-family:var(--f-mono)}
+/* calculator */
+.calc{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.calc{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);background:var(--surface);padding:18px;display:grid;gap:14px}
+.panel h3{font-size:15px}
+.field{display:grid;gap:4px}
+.field label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.field label output{font-family:var(--f-mono);color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--brass)}
+.grid4{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:6px;align-items:center;font-size:13px}
+.grid4 .h{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:center}
+.grid4 input{width:100%;font-family:var(--f-mono);font-size:13px;padding:5px 4px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:right;border-radius:2px}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+button.reset{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;cursor:pointer;border-radius:2px;justify-self:start}
+button.reset:hover{border-color:var(--brass)}
+.result{display:grid;gap:16px;min-width:0}
+.mix{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);background:var(--surface)}
+@media (max-width:520px){.mix{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.mix>div{padding:14px 16px;border-right:1px solid var(--line);display:grid;gap:2px}
+.mix>div:last-child{border-right:0}
+.mix .t{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.mix .c{font-family:var(--f-mono);font-size:28px;font-weight:600}
+.mix .c small{font-size:13px;color:var(--muted);font-weight:400}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font-size:12px;font-family:var(--f-mono);padding:3px 9px;border-radius:999px;border:1px solid currentColor}
+.pill.ok{color:var(--good)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));border:1px solid var(--line);background:var(--surface)}
+.kv>div{padding:12px 16px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);display:grid;gap:2px}
+.kv .k{font-size:12px;color:var(--muted)}
+.kv .v{font-family:var(--f-mono);font-size:18px;font-weight:600}
+.bar{height:14px;display:flex;border:1px solid var(--line);background:var(--bg)}
+.bar span{display:block;height:100%}
+ol.rec{margin:0;padding-left:1.3em;display:grid;gap:12px}
+ol.rec li::marker{font-family:var(--f-mono);color:var(--brass)}
+ul.plain{margin:0;padding-left:1.1em;display:grid;gap:6px}
+/* sources */
+ol.srcs{margin:0;padding:0;list-style:none;display:grid;border:1px solid var(--line);background:var(--surface)}
+ol.srcs li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+ol.srcs li:last-child{border-bottom:0}
+ol.srcs li:target{background:var(--brass-soft)}
+ol.srcs .id{font-family:var(--f-mono);font-weight:600;color:var(--brass)}
+ol.srcs .t{font-weight:500}
+ol.srcs .meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+ol.srcs .claims{font-size:13px}
+ol.srcs a.ext{word-break:break-all;font-size:13px}
+footer{padding-block:32px 48px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+</style>
+</head><body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="stamp"><b>분석보고</b> 동원사단 보병대대 · 동원준비태세 완비 임무 · 2026.10 공개자료 기준</span>
+    <h1>현역 1명의 빈자리를<br>상비예비군 몇 명이 메워야 하는가</h1>
+    <p class="answer col">현역 간부 1명이 1년간 해내는 동원준비 업무량을 상비예비군으로 채우려면 <strong>180일형 1.5명, 90일형 3.2명, 60일형 5.1명, 30일형 12.3명</strong>이 필요합니다. 일한 만큼의 비용은 모든 유형이 현역보다 낮지만, 복무일이 짧을수록 비용 이점이 빠르게 줄고 관리할 인원이 급격히 늘어납니다.</p>
+    <div class="ratio" id="heroRatio"></div>
+    <p class="note">현역 1명 = 연 225일 × 효율 1.0 기준. 비용은 1인 연간 총비용 추정, 단위 만원. 모든 수치의 계산식은 <a href="#method">계산 기준과 방식</a>, 근거 자료는 <a href="#sources">출처 목록</a>에서 확인할 수 있습니다.</p>
+    <nav class="jump" aria-label="바로가기"><a href="#background">현황</a><a href="#capability">임무수행 능력</a><a href="#cost">비용</a><a href="#optimizer">최적 조합 계산기</a><a href="#method">계산 기준과 방식</a><a href="#sources">출처·팩트체크</a></nav>
+  </div>
+</header>
+
+<section id="background">
+  <div class="wrap">
+    <span class="eyebrow">01 · 현황</span>
+    <h2>왜 지금 이 비교가 필요한가</h2>
+    <div class="col" style="display:grid;gap:14px">
+      <p>동원사단 보병대대는 평시 현역 30명 안팎으로 유지되고, 전시에는 수백 명의 예비군을 받아 부대를 창설합니다. 동원위주부대의 간부 편성률은 10% 미만이며 전시 소요 대비 상비전력은 약 35%, 예비전력이 약 65%를 차지합니다.<a class="cite" href="#src-9">[9]</a> 평시 소수 인원이 동원 자원 관리, 장비·물자 관리, 계획 최신화, 동원훈련 준비를 모두 맡는 구조입니다.</p>
+      <p>병역자원 감소로 현역 간부 충원이 어려워지자 국방부는 상비예비군(2025년 '비상근 예비군'에서 명칭 변경<a class="cite" href="#src-10">[10]</a>)을 확대하고 있습니다. 2025년 집중편성부대를 24개에서 30개로 늘렸고<a class="cite" href="#src-3">[3]</a>, 2026년 9월에는 단기 5,000명·장기 700명이던 정원 상한<a class="cite" href="#src-9">[9]</a>을 없애고 매년 예산 당국과 협의해 정하겠다고 밝혔습니다.<a class="cite" href="#src-4">[4]</a></p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>구분</th><th class="l">소집 기간</th><th class="l">보상비(일)</th><th class="l">주요 대상·임무</th><th class="l">근거</th></tr></thead>
+        <tbody>
+          <tr><td>단기 상비예비군</td><td class="l">연 30일 이내 (통상 15일 내외, 월 1~2회)</td><td class="l">평일 10만원 · 휴일 15만원 (+교통비)</td><td class="l">예비역 장교·부사관·병, 동원위주부대 전시 직책</td><td class="l"><a class="cite" href="#src-1">[1]</a><a class="cite" href="#src-2">[2]</a></td></tr>
+          <tr><td>장기 상비예비군</td><td class="l">연 180일 이내 (40~180일 선택)</td><td class="l">15만원 (평일·휴일 동일)</td><td class="l">예비역 간부, 동원위주부대 주요 직책 평시 근무</td><td class="l"><a class="cite" href="#src-1">[1]</a><a class="cite" href="#src-14">[14]</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">공통 임무는 평시 소집·훈련으로 전시와 같은 직책을 숙달해 동원 즉시 임무를 수행하는 것입니다.<a class="cite" href="#src-1">[1]</a> 2025년부터 장기형은 연 70·100·140·180일 중 선택하도록 운용되고 있습니다.<a class="cite" href="#src-3">[3]</a> 이 분석은 사용자가 제시한 30·60·90·180일 구성을 기준으로 합니다.</p>
+  </div>
+</section>
+
+<section id="frame">
+  <div class="wrap">
+    <span class="eyebrow">02 · 분석 틀</span>
+    <h2>'동원준비태세 완비'를 두 가지 일로 나눠 봅니다</h2>
+    <p class="col lede">현역 30명과 상비예비군의 임무는 같지만, 그 안에는 성격이 다른 두 일이 섞여 있습니다. 어느 쪽을 채우느냐에 따라 적합한 복무 유형이 달라집니다.</p>
+    <div class="frame">
+      <div class="box"><span class="tag">A · 평시 준비업무</span><h3>매일 돌아가야 하는 일</h3><p>동원 자원 현행화, 장비·물자 정비와 보관, 동원계획 최신화, 훈련 준비와 행정. 연속성이 중요하고, 사람이 바뀌거나 공백이 길면 손실이 생깁니다.</p><p class="note">측정 단위: 유효 근무일(근무일 × 효율)</p></div>
+      <div class="box"><span class="tag">B · 전시 직책 숙달</span><h3>전시에 자리를 맡을 사람</h3><p>동원 시 핵심 직책(중대장, 소대장, 행정·군수 부사관 등)을 맡을 인원이 그 직책을 미리 익혀 두는 일. 근무일보다 숙달된 사람의 수가 중요합니다.</p><p class="note">측정 단위: 숙달 인원(명)</p></div>
+    </div>
+    <div class="formula">필요 인원(유형 i) = 현역 연간 근무일 225 ÷ (복무일 d<sub>i</sub> × 효율 e<sub>i</sub>)&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;효율 e = 직무 숙련 P × 업무 연속성 C</div>
+  </div>
+</section>
+
+<section id="capability">
+  <div class="wrap">
+    <span class="eyebrow">03 · 임무수행 능력</span>
+    <h2>같은 하루라도 생산성은 다릅니다</h2>
+    <div class="col" style="display:grid;gap:14px">
+      <p>현역은 연 365일 중 주말·공휴일(약 115일), 연가(약 21일), 교육·파견 등(약 4일)을 빼면 실제 부대 업무일이 약 225일입니다. 이 225일을 효율 1.0으로 기준을 잡았습니다. <span class="badge asm">가정</span></p>
+      <p>상비예비군은 직책 관련 경험자를 우선 선발하므로<a class="cite" href="#src-2">[2]</a> 기본 숙련(P)은 높지만, 소집과 소집 사이 공백 동안 절차·시스템 변경을 놓치고 매번 재적응·인수인계 시간이 듭니다(C). 숙련 감쇠 메타분석(Arthur 외, 1998)은 미사용 기간이 길수록 수행 능력 손실이 커지고, 정확성을 요구하는 과업이 속도 과업보다 크게 감쇠한다고 보고합니다.<a class="cite" href="#src-12">[12]</a><a class="cite" href="#src-13">[13]</a> 동원계획·행정 업무가 여기에 해당합니다.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>유형</th><th>연 복무일</th><th class="l">소집 패턴(가정)</th><th>숙련 P</th><th>연속성 C</th><th>효율 e</th><th>유효 근무일</th><th>현역 1명 대체 인원</th></tr></thead>
+        <tbody id="capTbody"></tbody>
+      </table>
+    </div>
+    <p class="note"><span class="badge asm">가정</span> P·C는 공개 통계가 없어 위 연구 결과의 방향성을 근거로 정한 추정값입니다. 부대 실측(업무 처리 시간, 점검 결과)이 있으면 아래 계산기에서 바로 바꿔 볼 수 있습니다. 설정 근거는 <a href="#m-step5">계산 단계 5</a>에 있습니다.</p>
+  </div>
+</section>
+
+<section id="cost">
+  <div class="wrap">
+    <span class="eyebrow">04 · 운영 비용</span>
+    <h2>1인 연간 총비용과, 현역 1명분의 비용</h2>
+    <p class="col lede">현역은 봉급 외에 각종 수당, 정부 연금부담, 주거·피복·의료 등 간접비와 양성비가 붙습니다. 상비예비군은 보상비가 대부분이고 선발·피복·보험·관리비가 1인당 고정비로 붙습니다.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>구분</th><th class="l">산정 기준</th><th>1인 연간 총비용</th><th>유효 근무일</th><th>유효 1일당 비용</th><th>현역 1명분 비용</th><th>현역 대비</th><th class="l">근거</th></tr></thead>
+        <tbody id="costTbody"></tbody>
+      </table>
+    </div>
+    <div class="chart" id="costChart" aria-label="현역 1명분 업무량을 채우는 데 드는 연간 비용 비교"></div>
+    <p class="note">현역 비용 산식과 상비예비군 비용 산식은 <a href="#m-step1">계산 단계 1~4</a>에 예시 계산과 함께 정리했습니다. 참고로 미국 국방 자료는 예비역 1인 비용을 현역의 약 3분의 1(장교 34%, 병 37%)로 봅니다.<a class="cite" href="#src-11">[11]</a> 이 분석의 180일형(현역 1인 비용의 38%)과 비슷한 수준입니다.</p>
+  </div>
+</section>
+
+<section id="optimizer">
+  <div class="wrap">
+    <span class="eyebrow">05 · 최적 조합 계산기</span>
+    <h2>30·60·90·180일을 어떻게 섞을 것인가</h2>
+    <p class="col lede">대체할 현역 수, 전시 직책 숙달 목표, 유형별 확보 가능 인원을 넣으면 비용이 가장 적게 드는 조합을 모든 경우를 따져 찾습니다. 기본값은 동원사단 보병대대(현역 30명)에서 현역 5명이 결원인 상황입니다. 탐색 방식은 <a href="#m-step8">계산 단계 8</a>을 보십시오.</p>
+    <div class="calc">
+      <div class="panel" role="group" aria-label="입력값">
+        <h3>임무 조건</h3>
+        <div class="field"><label for="R">대체할 현역 수 <output id="Ro"></output></label><input type="range" id="R" min="1" max="15" step="1" value="5"></div>
+        <div class="field"><label for="W">전시 직책 숙달 목표(상비예비군 인원) <output id="Wo"></output></label><input type="range" id="W" min="0" max="40" step="1" value="10"></div>
+        <div class="field"><label for="K">현역 1명당 관리 가능 상비예비군 <output id="Ko"></output></label><input type="range" id="K" min="0.5" max="4" step="0.5" value="1.5"></div>
+        <div class="field"><label for="AC">현역 1인 연간 총비용(만원) <output id="ACo"></output></label><input type="range" id="AC" min="5000" max="12000" step="100" value="8000"></div>
+        <h3>유형별 조건</h3>
+        <div class="grid4" id="typeGrid">
+          <span></span><span class="h">30일</span><span class="h">60일</span><span class="h">90일</span><span class="h">180일</span>
+        </div>
+        <button class="reset" id="resetBtn" type="button">기본값으로 되돌리기</button>
+      </div>
+      <div class="result" aria-live="polite">
+        <div class="status" id="status"></div>
+        <div class="mix" id="mix"></div>
+        <div class="bar" id="effBar" title="유효 근무일 구성"></div>
+        <div class="kv" id="kv"></div>
+        <p class="note" id="explain"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="scenarios">
+  <div class="wrap">
+    <span class="eyebrow">06 · 시나리오</span>
+    <h2>결원 규모별 최적 조합</h2>
+    <p class="col lede">위 계산기의 현재 조건(전시 직책 숙달 목표, 관리 한도, 유형별 확보 가능 인원)에서 결원 규모만 바꾼 결과입니다. 기본값은 확보 가능 인원 180일형 5·90일형 10·60일형 25·30일형 40명입니다.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>대체 현역 수</th><th>180일</th><th>90일</th><th>60일</th><th>30일</th><th>총 인원</th><th>연간 비용</th><th>현역 유지 시</th><th>절감률</th><th>판정</th></tr></thead>
+        <tbody id="scTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="wrap">
+    <span class="eyebrow">07 · 결론과 제언</span>
+    <h2>장기형으로 업무를, 단기형으로 전시 직책을</h2>
+    <ol class="rec col">
+      <li><b>평시 준비업무는 180일·90일형으로 채웁니다.</b> 현역 1명분 업무량을 채우는 비용이 현역의 약 55~62% 수준이고, 필요 인원도 현역 1명당 1.5~3.2명으로 관리 가능한 범위입니다.</li>
+      <li><b>30일형은 업무 대체용이 아닙니다.</b> 현역 1명분을 채우려면 12명이 넘게 필요하고 비용도 현역의 85% 수준까지 올라갑니다. 대신 전시 직책 숙달 인원을 늘리는 데는 1인당 비용이 가장 낮으므로 목표 B를 채우는 용도로 씁니다.</li>
+      <li><b>병목은 예산이 아니라 장기형 지원자입니다.</b> 장기형 확보 인원이 줄면 최적 조합이 60·30일형으로 밀리면서 인원과 관리 부담이 급증합니다. 2024년 60사단의 장기형 선발이 4명이었다는 기록처럼<a class="cite" href="#src-10">[10]</a> 공급이 제약 조건이며, 연구에서도 적정 보상비가 제도 발전의 핵심 요인으로 꼽혔습니다.<a class="cite" href="#src-9">[9]</a> 장기형 보상비 현실화와 연속 복무 우대가 가장 효과가 큰 조치입니다.</li>
+      <li><b>현역 핵심 직위는 남겨 둡니다.</b> 지휘권, 24시간 상황 대응, 보안 업무, 상비예비군 관리는 현역이 맡아야 합니다. 기본 조건에서 대대 현역의 3분의 1(10명) 이상을 대체하면 필요 인원이 관리 한도를 넘습니다.</li>
+      <li><b>부대 실측으로 효율 계수를 보정합니다.</b> 이 분석의 효율 값은 추정입니다. 상비예비군 집중편성부대 30곳의 업무 처리 기록과 동원훈련 평가 결과로 P·C를 측정하면 결론의 신뢰도가 크게 높아집니다.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <span class="eyebrow">08 · 계산 기준과 방식</span>
+    <h2>모든 숫자는 이 여덟 단계로 계산했습니다</h2>
+    <p class="col lede">단위는 만원·일·명입니다. 각 입력값 옆 표시는 <span class="badge ok">공식 확인</span> 공식 기관 자료로 확인, <span class="badge sec">2차 출처</span> 언론·정리 자료로 확인(공식 대조 권장), <span class="badge asm">가정</span> 분석자가 설정한 값입니다.</p>
+    <div class="steps">
+      <div class="step" id="m-step1"><span class="no">1</span><div class="body">
+        <h3>현역 1인 연간 총비용</h3>
+        <code>현역 총비용 = 봉급월액 × 12 × (1 + 수당률) × (1 + 정부 연금부담률) + 간접비 + 양성비 상각</code>
+        <ul class="plain">
+          <li>봉급월액: 2026년 봉급표 대위 8호봉 376.38만, 상사 10호봉 345.35만, 중사 10호봉 291.17만 <span class="badge sec">2차 출처</span><a class="cite" href="#src-6">[6]</a><a class="cite" href="#src-7">[7]</a> (공식 대조: 인사혁신처 봉급표<a class="cite" href="#src-8">[8]</a>)</li>
+          <li>수당률 55%: 정근수당, 명절휴가비, 정액급식비, 직급보조비, 시간외근무수당, 가족·주택수당 등을 봉급 대비 비율로 합산한 추정 <span class="badge asm">가정</span></li>
+          <li>정부 연금부담률 9%: 군인연금 국가부담금을 기준소득 대비 비율로 단순화 <span class="badge asm">가정</span></li>
+          <li>간접비 900만: 주거(관사·주택), 피복, 의료, 교육훈련 등 <span class="badge asm">가정</span></li>
+          <li>양성비 상각 300만: 임관 전 양성 비용을 평균 복무기간으로 나눈 값 <span class="badge asm">가정</span></li>
+        </ul>
+        <span class="calc-ex">예) 중사 10호봉: 291.17 × 12 = 3,494.0
+    × 1.55 = 5,415.7  × 1.09 = 5,903.1  + 900 + 300 = 7,103만원</span>
+      </div></div>
+      <div class="step" id="m-step2"><span class="no">2</span><div class="body">
+        <h3>현역 기준 비용(가중평균)</h3>
+        <p>동원사단 대대 간부 구성을 위관 1 : 상사급 1 : 중사급 1.3으로 가정해 가중평균하고 100만원 단위로 반올림했습니다. <span class="badge asm">가정</span></p>
+        <span class="calc-ex">(8,831 × 1 + 8,202 × 1 + 7,103 × 1.3) ÷ 3.3 = 7,999.9 → 8,000만원</span>
+      </div></div>
+      <div class="step" id="m-step3"><span class="no">3</span><div class="body">
+        <h3>현역 연간 유효 근무일</h3>
+        <span class="calc-ex">365 − 주말·공휴일 115 − 연가 21 − 교육·파견 등 4 = 225일 (효율 1.0)</span>
+        <p class="note">당직·비상대기 등 근무시간 외 기여는 포함하지 않았습니다. 포함하면 현역의 상대 가치가 더 커집니다. <span class="badge asm">가정</span></p>
+      </div></div>
+      <div class="step" id="m-step4"><span class="no">4</span><div class="body">
+        <h3>상비예비군 1인 연간 총비용</h3>
+        <code>상비 총비용 = 복무일 × (일 보상비 + 중식비 0.9) + 1인 고정비 150</code>
+        <ul class="plain">
+          <li>일 보상비: 장기 15만, 단기 평일 10만·휴일 15만 <span class="badge ok">공식 확인</span><a class="cite" href="#src-1">[1]</a></li>
+          <li>30일형 일 보상비 12.5만 = 휴일 비율 30% 가정 시 평균 11.5만 + 교통비 1만(지급은 확인, 금액은 가정) <span class="badge asm">가정</span><a class="cite" href="#src-10">[10]</a></li>
+          <li>중식비 0.9만: 2026년 예비군 급식비(도시락비) 9,000원 준용 <span class="badge ok">공식 확인</span><a class="cite" href="#src-5">[5]</a></li>
+          <li>1인 고정비 150만: 선발·신원조사, 피복·장구, 보험·재해보상, 관리 행정 <span class="badge asm">가정</span></li>
+        </ul>
+        <span class="calc-ex">예) 180일형: 180 × (15 + 0.9) + 150 = 3,012만원
+    30일형:  30 × (12.5 + 0.9) + 150 =   552만원</span>
+      </div></div>
+      <div class="step" id="m-step5"><span class="no">5</span><div class="body">
+        <h3>효율 계수 e = P × C</h3>
+        <p>P(직무 숙련)는 직책 관련 경험자 우선 선발<a class="cite" href="#src-2">[2]</a>을 반영해 간부형 0.90, 병 출신이 섞이는 30일형 0.85로 두었습니다. C(업무 연속성)는 공백이 길수록 감쇠가 커진다는 연구 결과<a class="cite" href="#src-12">[12]</a>의 방향을 따라 소집 간격에 비례해 낮췄습니다. <span class="badge asm">가정</span></p>
+        <div class="tbl"><table style="min-width:520px">
+          <thead><tr><th>유형</th><th class="l">소집 간격</th><th>P</th><th>C</th><th>e</th></tr></thead>
+          <tbody><tr><td>180일형</td><td class="l">주 3~4일, 공백 짧음</td><td>0.90</td><td>0.95</td><td>0.855</td></tr><tr><td>90일형</td><td class="l">월 7~8일</td><td>0.90</td><td>0.88</td><td>0.792</td></tr><tr><td>60일형</td><td class="l">월 5일 내외</td><td>0.90</td><td>0.82</td><td>0.738</td></tr><tr><td>30일형</td><td class="l">월 2~3일, 공백 김</td><td>0.85</td><td>0.72</td><td>0.612</td></tr></tbody>
+        </table></div>
+      </div></div>
+      <div class="step" id="m-step6"><span class="no">6</span><div class="body">
+        <h3>현역 1명 대체에 필요한 인원</h3>
+        <code>유효 근무일 = 복무일 × e      필요 인원 = 225 ÷ 유효 근무일</code>
+        <span class="calc-ex">예) 180일형: 180 × 0.855 = 153.9일 → 225 ÷ 153.9 = 1.46명
+    30일형:  30 × 0.612 =  18.4일 → 225 ÷ 18.4  = 12.25명</span>
+      </div></div>
+      <div class="step" id="m-step7"><span class="no">7</span><div class="body">
+        <h3>현역 1명분 비용과 현역 대비 비율</h3>
+        <code>현역 1명분 비용 = 필요 인원 × 상비 1인 총비용      비율 = 현역 1명분 비용 ÷ 현역 기준 비용</code>
+        <span class="calc-ex">예) 180일형: 1.462 × 3,012 = 4,404만원 → 4,404 ÷ 8,000 = 55%
+    30일형:  12.25 × 552  = 6,765만원 → 6,765 ÷ 8,000 = 85%</span>
+      </div></div>
+      <div class="step" id="m-step8"><span class="no">8</span><div class="body">
+        <h3>최적 조합 탐색</h3>
+        <p>유형별 인원 n<sub>30</sub>, n<sub>60</sub>, n<sub>90</sub>, n<sub>180</sub>을 정수로 두고 아래 조건에서 총비용이 가장 낮은 조합을 찾습니다. 경우의 수가 수만 개 수준이라 모든 조합을 직접 계산합니다(완전 탐색).</p>
+        <code>최소화   Σ nᵢ × 상비 1인 총비용ᵢ
+조건 ①   Σ nᵢ × 유효 근무일ᵢ ≥ 225 × 대체할 현역 수        (업무량 A 충족)
+조건 ②   Σ nᵢ ≥ 전시 직책 숙달 목표                       (숙달 인원 B 충족)
+조건 ③   nᵢ ≤ 유형별 확보 가능 인원                        (지원자 공급 한계)
+조건 ④   Σ nᵢ ≤ (30 − 대체할 현역 수) × 관리 한도           (현역 관리 여력)</code>
+        <p class="note">조건 ①~③을 모두 만족하는 조합이 없으면 "조합 없음"으로 표시합니다. 조건 ④는 우선 지키되, 지킬 수 없으면 ④를 넘는 최저비용 조합을 "관리 초과"로 표시합니다. 확보 가능 인원(180일형 5, 90일형 10, 60일형 25, 30일형 40)과 관리 한도 1.5명은 <span class="badge asm">가정</span>입니다.</p>
+      </div></div>
+    </div>
+    <div class="frame">
+      <div class="box"><h3>이 분석이 반영하지 못한 것</h3><ul class="plain"><li>현역의 당직·비상대기, 위기 시 즉각 대응 가치</li><li>보안 등급이 필요한 업무의 대체 가능성</li><li>상비예비군 이탈·중도 해지에 따른 재선발 비용</li><li>2030년까지 예정된 보상비 인상<a class="cite" href="#src-5">[5]</a><a class="cite" href="#src-10">[10]</a></li></ul></div>
+      <div class="box"><h3>값을 바꾸면 결론이 바뀌는 지점</h3><ul class="plain"><li>180일형 효율이 약 0.47 아래로 내려가면 현역 1명분 비용이 현역보다 커집니다 (225 × 3,012 ÷ (180 × 8,000) = 0.47)</li><li>다른 값이 그대로일 때 장기형 일 보상비가 약 28.7만원을 넘으면 180일형 비용이 현역 1명분을 넘습니다</li><li>계산기의 입력값을 바꿔 직접 확인할 수 있습니다</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <span class="eyebrow">09 · 출처와 팩트체크</span>
+    <h2>본문 각주 번호로 원문을 확인하십시오</h2>
+    <p class="col lede">본문의 <a class="cite" href="#src-1" style="vertical-align:baseline">[n]</a> 표시를 누르면 해당 출처로 이동합니다. 각 출처에는 이 페이지가 인용한 내용과 검증 수준을 함께 적었습니다. 확인일은 모두 2026년 10월 20일입니다.</p>
+    <ol class="srcs" id="srcList"></ol>
+    <p class="note col">이 페이지는 공개 자료만 사용했으며 특정 부대의 실제 편제·인원과 다를 수 있습니다. <span class="badge sec">2차 출처</span> 항목은 정책 판단 전에 국방부·육군 공식 문서로 대조하십시오.</p>
+  </div>
+</section>
+
+<footer><div class="wrap">상비예비군 대체 분석 · 2026년 10월 공개자료 기준 · 수치는 추정치를 포함합니다</div></footer>
+
+<script>
+(function(){
+// ---- 출처 데이터 (docs/SOURCES.md, data/sources.json과 동일) ----
+const SOURCES=[
+ {id:1,t:'상비예비군 제도',pub:'국방부 예비군 홈페이지',type:'공식',lv:'ok',url:'https://www.yebigun1.mil.kr/dmobis/rfh/rgt/info/03_06_prtmsvc.jsp',c:'단기 연 30일 이내·평일 10만/휴일 15만, 장기 연 180일 이내(40~180일 선택)·15만, 지원 대상, 동원위주부대 주요 직책 임무'},
+ {id:2,t:'육군 장기·단기 상비예비군 수시모집 (2026 단기 4차 수시모집 공고 정리)',pub:'브런치',type:'2차',lv:'sec',url:'https://brunch.co.kr/@respectsoldier/564',c:'단기 연 15일(직무교육 3·연합훈련 9·동원훈련 3), 선발 직책 관련 현역 경험자 우선, 240명 선발'},
+ {id:3,t:'상비예비군 집중편성부대 24→30개로 확대 (2025.2.11)',pub:'다음 뉴스',type:'언론',lv:'sec',url:'https://v.daum.net/v/20250211180312001',c:'집중편성부대 24→30개, 장기형 복무일 70·100·140·180일 선택, 동원전력사 예하 전 부대로 장기형 확대'},
+ {id:4,t:'병력 줄자 상비예비군 더 늘린다…5000명·700명 정원 상한 없앤다 (2026.9.25)',pub:'뉴스1',type:'언론',lv:'sec',url:'https://www.news1.kr/diplomacy/defense-diplomacy/6300818',c:'시행령상 정원 상한 폐지, 매년 기획예산처와 협의해 인원 결정'},
+ {id:5,t:'새해 예비군 훈련비 신설·급식비 인상…2026년 달라지는 국방·병무제도 (2025.12.31)',pub:'대한민국 정책브리핑',type:'공식',lv:'ok',url:'https://www.korea.kr/news/policyNewsView.do?newsId=148957373',c:'동원훈련Ⅰ형 9.5만, 급식비(도시락비) 8,000→9,000원, 2030년까지 훈련비 최저임금 수준 인상'},
+ {id:6,t:'부사관 봉급표 2026',pub:'공무원 위키(studygov)',type:'2차',lv:'sec',url:'https://gongmuwon.studygov.kr/wiki/nco-pay/',c:'중사 10호봉 2,911,700원, 상사 10호봉 3,453,500원'},
+ {id:7,t:'장교 봉급표 2026',pub:'공무원 위키(studygov)',type:'2차',lv:'sec',url:'https://gongmuwon.studygov.kr/wiki/officer-pay/',c:'대위 8호봉 3,763,800원'},
+ {id:8,t:'2026년 공무원봉급표',pub:'인사혁신처',type:'공식',lv:'ok',url:'https://www.mpm.go.kr/mpm/info/resultPay/bizSalary/2026/',c:'봉급표 공식 대조용 (군인 봉급표는 공무원보수규정 별표, 이 페이지에서 직접 확인 필요)'},
+ {id:9,t:'비상근 예비군제도 발전의 영향 요인 연구 (이정희, 한성대 박사논문, 2024)',pub:'한성대학교',type:'학술',lv:'ok',url:'https://dspace.hansung.ac.kr/bitstream/2024.oak/7425/2/200000848784.pdf',c:'동원위주부대 간부 편성률 10% 미만, 상비전력 약 35%·예비전력 약 65%, 단기 5,000·장기 700명 편성 규모, 적정 보상비가 중요 요인 2위'},
+ {id:10,t:'예비군/대한민국/상비예비군',pub:'나무위키',type:'2차(참고)',lv:'sec',url:'https://namu.wiki/w/%EC%98%88%EB%B9%84%EA%B5%B0/%EB%8C%80%ED%95%9C%EB%AF%BC%EA%B5%AD/%EC%83%81%EB%B9%84%EC%98%88%EB%B9%84%EA%B5%B0',c:'2025년 명칭 변경, 2024년 60사단 장기형 선발 4명, 단기 교통비 지급(2025~), 2030년 보상비 인상 예정 — 공식 대조 필요'},
+ {id:11,t:'National commission reviews AF life-cycle manpower costs',pub:'U.S. Air Force',type:'공식(해외)',lv:'ok',url:'https://www.af.mil/News/Article-Display/Article/467002/national-commission-reviews-af-life-cycle-manpower-costs/',c:'예비역 1인 연간 인력비용은 현역 대비 장교 34%, 병 37% (RFPB, 약 3분의 1)'},
+ {id:12,t:'Forgetting: The Basic Facts (Arthur 외 1998 요약)',pub:'Econlib',type:'2차',lv:'sec',url:'https://www.econlib.org/archives/2016/01/forgetting_the.html',c:'미사용 기간이 길수록 숙련 감쇠 증가, 정확성 과업 d=−1.00 vs 속도 과업 −0.32, 1년 이상 미사용 시 d=−1.4'},
+ {id:13,t:'Factors that influence skill decay and retention: A quantitative review (Arthur 외, 1998)',pub:'Human Performance 11(1)',type:'학술 원문',lv:'ok',url:'https://www.gwern.net/doc/psychology/spaced-repetition/1998-arthur.pdf',c:'숙련 감쇠 메타분석 원문'},
+ {id:14,t:'軍 비상근 예비군 법제화…일당 15만원·연간 180일 소집',pub:'이데일리',type:'언론',lv:'sec',url:'https://edaily.co.kr/News/Read?mediaCodeNo=257&newsId=02948726629276224',c:'장기형 일당 15만원·연 180일 소집 법제화 (기사 제목 기준)'}
+];
+const LV={ok:'공식·학술',sec:'2차 출처',asm:'가정'};
+document.getElementById('srcList').innerHTML=SOURCES.map(s=>`<li id="src-${s.id}"><span class="id">[${s.id}]</span><div style="display:grid;gap:4px;min-width:0"><span class="t">${s.t}</span><span class="meta"><span>${s.pub}</span><span class="badge ${s.lv}">${LV[s.lv]} · ${s.type}</span></span><span class="claims">인용 내용: ${s.c}</span><a class="ext" href="${s.url}" target="_blank" rel="noopener">${s.url}</a></div></li>`).join('');
+
+// ---- 모델 (src/model.ts와 동일 로직) ----
+const DAYS=225, MEAL=0.9, ALLOW=0.55, PENSION=0.09, INDIRECT=900, ACCESSION=300;
+function activeCost(m){const t=m*12*(1+ALLOW);return Math.round(t*(1+PENSION)+INDIRECT+ACCESSION);}
+const ACT=[{n:'대위 8호봉',m:376.38,w:1,src:7},{n:'상사 10호봉',m:345.35,w:1,src:6},{n:'중사 10호봉',m:291.17,w:1.3,src:6}];
+ACT.forEach(a=>a.c=activeCost(a.m));
+const actBlend=Math.round(ACT.reduce((s,a)=>s+a.c*a.w,0)/ACT.reduce((s,a)=>s+a.w,0)/100)*100;
+
+const DEF={d:[30,60,90,180],pay:[12.5,15,15,15],P:[0.85,0.90,0.90,0.90],C:[0.72,0.82,0.88,0.95],fixed:[150,150,150,150],cap:[40,25,10,5],
+  pattern:['월 2~3일, 공백 김','월 5일 내외','월 7~8일','월 15일, 주 3~4일']};
+let S=JSON.parse(JSON.stringify(DEF));
+const NAMES=['30일형','60일형','90일형','180일형'];
+const COLORS=['var(--s4)','var(--s3)','var(--s2)','var(--s1)'];
+const fmt=n=>Math.round(n).toLocaleString('ko-KR');
+const cite=n=>`<a class="cite" href="#src-${n}">[${n}]</a>`;
+const eff=i=>S.P[i]*S.C[i];
+const effDays=i=>S.d[i]*eff(i);
+const pcost=i=>S.d[i]*(S.pay[i]+MEAL)+S.fixed[i];
+
+function heroAndTables(){
+  const h=document.getElementById('heroRatio'); h.innerHTML='';
+  [3,2,1,0].forEach(i=>{const need=DAYS/effDays(i), c=need*pcost(i);
+    const d=document.createElement('div'); if(i===3) d.className='best';
+    d.innerHTML=`<span class="k">${NAMES[i]} 상비예비군</span><span class="v">${need.toFixed(1)}<small> 명</small></span><span class="n">현역 1명분 비용 ${fmt(c)}만원 · 현역 대비 ${Math.round(c/actBlend*100)}%</span>`;
+    h.appendChild(d);});
+  const cb=document.getElementById('capTbody'); cb.innerHTML=`<tr class="act"><td>현역 간부</td><td>225</td><td class="l">상시 근무</td><td>1.00</td><td>1.00</td><td>1.00</td><td>225</td><td>1.0명</td></tr>`;
+  [0,1,2,3].forEach(i=>{cb.innerHTML+=`<tr><td>${NAMES[i]}</td><td>${S.d[i]}</td><td class="l">${S.pattern[i]}</td><td>${S.P[i].toFixed(2)}</td><td>${S.C[i].toFixed(2)}</td><td>${eff(i).toFixed(3)}</td><td>${effDays(i).toFixed(1)}</td><td><b>${(DAYS/effDays(i)).toFixed(1)}명</b></td></tr>`;});
+  const ct=document.getElementById('costTbody'); ct.innerHTML='';
+  ACT.forEach(a=>{ct.innerHTML+=`<tr class="act"><td>현역 ${a.n}</td><td class="l">월봉 ${a.m.toLocaleString('ko-KR')}만</td><td>${fmt(a.c)}</td><td>225</td><td>${(a.c/DAYS).toFixed(1)}</td><td>${fmt(a.c)}</td><td>-</td><td class="l">${cite(a.src)} <span class="badge asm">수당·간접비 가정</span></td></tr>`;});
+  ct.innerHTML+=`<tr class="act"><td><b>현역 가중평균</b></td><td class="l">계산 기준값 (단계 2)</td><td><b>${fmt(actBlend)}</b></td><td>225</td><td>${(actBlend/DAYS).toFixed(1)}</td><td><b>${fmt(actBlend)}</b></td><td>100%</td><td class="l"><a href="#m-step2">단계 2</a></td></tr>`;
+  [3,2,1,0].forEach(i=>{const c=pcost(i),ed=effDays(i),eq=DAYS/ed*c;
+    ct.innerHTML+=`<tr><td>${NAMES[i]} 상비예비군</td><td class="l">${S.d[i]}일 × (${S.pay[i]}+0.9) + ${S.fixed[i]}</td><td>${fmt(c)}</td><td>${ed.toFixed(1)}</td><td>${(c/ed).toFixed(1)}</td><td><b>${fmt(eq)}</b></td><td>${Math.round(eq/actBlend*100)}%</td><td class="l">${cite(1)}${cite(5)} <span class="badge asm">고정비·효율 가정</span></td></tr>`;});
+  drawCostChart();
+}
+function drawCostChart(){
+  const rows=[{l:'현역 간부(가중평균)',v:actBlend,c:'var(--act)',sub:'1.0명'}].concat([3,2,1,0].map(i=>({l:NAMES[i],v:DAYS/effDays(i)*pcost(i),c:COLORS[i],sub:(DAYS/effDays(i)).toFixed(1)+'명'})));
+  const W=760,LW=150,RW=120,BH=26,G=14,top=10,H=top+rows.length*(BH+G)+26;
+  const max=Math.ceil(Math.max(...rows.map(r=>r.v))/2000)*2000;
+  const x=v=>LW+(W-LW-RW)*v/max;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img"><title>현역 1명분 업무량을 채우는 연간 비용(만원)</title>`;
+  for(let t=0;t<=max;t+=2000){s+=`<line x1="${x(t)}" x2="${x(t)}" y1="${top-4}" y2="${H-22}" stroke="var(--line)" stroke-width="1"/><text class="axis" x="${x(t)}" y="${H-6}" text-anchor="middle">${fmt(t)}</text>`;}
+  rows.forEach((r,k)=>{const y=top+k*(BH+G);
+    s+=`<text x="${LW-10}" y="${y+BH/2+5}" text-anchor="end">${r.l}</text><rect x="${LW}" y="${y}" width="${x(r.v)-LW}" height="${BH}" fill="${r.c}"/><text x="${x(r.v)+8}" y="${y+BH/2+5}" style="font-family:var(--f-mono)">${fmt(r.v)} · ${r.sub}</text>`;});
+  s+=`</svg>`;
+  document.getElementById('costChart').innerHTML=`<p class="note" style="margin-bottom:10px">현역 1명분 업무량(유효 225일)을 채우는 연간 비용, 만원 · 오른쪽 숫자는 필요 인원</p>`+s;
+}
+function optimize(R,W,K,AC){
+  const need=DAYS*R, maxPeople=Math.floor(Math.max(0,30-R)*K);
+  let best=null; const cap=S.cap, ed=[0,1,2,3].map(effDays), pc=[0,1,2,3].map(pcost);
+  for(let d=0;d<=cap[3];d++)for(let c=0;c<=cap[2];c++)for(let b=0;b<=cap[1];b++){
+    const rem=Math.max(0,need-(d*ed[3]+c*ed[2]+b*ed[1]));
+    let a=ed[0]>0?Math.ceil(rem/ed[0]-1e-9):(rem>0?Infinity:0); a=Math.max(a,W-(b+c+d),0);
+    if(a>cap[0]) continue;
+    const n=[a,b,c,d], ppl=a+b+c+d, cost=n.reduce((s,k,i)=>s+k*pc[i],0), over=ppl>maxPeople;
+    const key=(over?1e12:0)+cost;
+    if(!best||key<best.key) best={key,n,cost,ppl,over,eff:n.reduce((s,k,i)=>s+k*ed[i],0)};
+  }
+  return {best,maxPeople,need,actCost:AC*R};
+}
+const $=id=>document.getElementById(id);
+function buildGrid(){
+  const g=$('typeGrid');
+  [['보상비(만/일)','pay',0.5],['숙련 P','P',0.01],['연속성 C','C',0.01],['고정비(만/인)','fixed',10],['확보 가능(명)','cap',1]].forEach(([lab,key,step])=>{
+    const l=document.createElement('span'); l.textContent=lab; g.appendChild(l);
+    for(let i=0;i<4;i++){const inp=document.createElement('input'); inp.type='number'; inp.step=step; inp.min=0; inp.id=`${key}${i}`; inp.value=S[key][i]; inp.setAttribute('aria-label',`${NAMES[i]} ${lab}`);
+      inp.addEventListener('input',()=>{const v=parseFloat(inp.value); if(!isNaN(v)&&v>=0){S[key][i]=key==='cap'?Math.min(60,Math.round(v)):v; update();}}); g.appendChild(inp);}
+  });
+}
+function update(){
+  const R=+$('R').value,W=+$('W').value,K=+$('K').value,AC=+$('AC').value;
+  $('Ro').textContent=R+'명'; $('Wo').textContent=W+'명'; $('Ko').textContent=K+'명'; $('ACo').textContent=fmt(AC);
+  heroAndTables();
+  const r=optimize(R,W,K,AC), b=r.best, mix=$('mix'), st=$('status'), kv=$('kv'), bar=$('effBar');
+  scenarios(W,K,AC);
+  if(!b){mix.innerHTML='';kv.innerHTML='';bar.innerHTML='';st.innerHTML='<span class="pill bad">조합 없음</span>';
+    $('explain').textContent='확보 가능 인원 안에서는 대체할 업무량을 채울 수 없습니다. 장기형(90·180일) 확보 인원을 늘리거나 대체할 현역 수를 줄여 보십시오.';return;}
+  mix.innerHTML=[3,2,1,0].map(i=>`<div><span class="t">${NAMES[i]}</span><span class="c">${b.n[i]}<small> 명</small></span></div>`).join('');
+  const saving=1-b.cost/r.actCost, pills=[];
+  pills.push(b.over?`<span class="pill bad">관리 한도 초과 ${b.ppl}/${r.maxPeople}명</span>`:`<span class="pill ok">관리 가능 ${b.ppl}/${r.maxPeople}명</span>`);
+  pills.push(saving>0.3?`<span class="pill ok">절감 ${Math.round(saving*100)}%</span>`:saving>0?`<span class="pill warn">절감 ${Math.round(saving*100)}%</span>`:`<span class="pill bad">비용 증가 ${Math.round(-saving*100)}%</span>`);
+  const capHit=b.n[3]>=S.cap[3]&&S.cap[3]>0; if(capHit) pills.push('<span class="pill warn">180일형 확보 한도 도달</span>');
+  st.innerHTML=pills.join('');
+  bar.innerHTML=[3,2,1,0].map(i=>{const w=b.n[i]*effDays(i)/Math.max(b.eff,1)*100;return w>0?`<span style="width:${w}%;background:${COLORS[i]}" title="${NAMES[i]} ${w.toFixed(0)}%"></span>`:'';}).join('');
+  const avgPresent=[0,1,2,3].reduce((s,i)=>s+b.n[i]*S.d[i],0)/DAYS;
+  kv.innerHTML=[['연간 총비용',fmt(b.cost)+'만'],['현역 유지 시',fmt(r.actCost)+'만'],['연간 절감액',fmt(r.actCost-b.cost)+'만'],['총 인원',b.ppl+'명'],['유효 근무일',fmt(b.eff)+' / '+fmt(r.need)],['평일 평균 출근',avgPresent.toFixed(1)+'명']]
+    .map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  const lim=[];
+  if(capHit) lim.push('180일형을 확보 가능 인원까지 모두 쓴 뒤 나머지를 짧은 유형으로 채웠습니다');
+  if(W>0) lim.push(`전시 직책 숙달 목표 ${W}명을 충족합니다`);
+  if(b.over) lim.push(`관리 한도(잔여 현역 ${30-R}명 × ${K}명) 안에서는 조합이 없어, 한도를 넘는 최저비용 조합을 표시했습니다`);
+  $('explain').textContent=`현역 ${R}명의 업무량(유효 ${fmt(r.need)}일)을 채우는 최저비용 조합입니다. `+lim.join('. ')+(lim.length?'.':'');
+}
+function scenarios(W,K,AC){
+  const tb=$('scTbody'); tb.innerHTML='';
+  [3,5,8,10,12].forEach(R=>{const r=optimize(R,W,K,AC),b=r.best;
+    if(!b){tb.innerHTML+=`<tr><td>${R}명</td><td colspan="8" class="l">확보 가능 인원으로 충족 불가</td><td><span class="pill bad">불가</span></td></tr>`;return;}
+    const sv=1-b.cost/r.actCost;
+    const tag=b.over?'<span class="pill bad">관리 초과</span>':(b.n[3]>=S.cap[3]?'<span class="pill warn">장기형 부족</span>':'<span class="pill ok">적정</span>');
+    tb.innerHTML+=`<tr><td>${R}명</td><td>${b.n[3]}</td><td>${b.n[2]}</td><td>${b.n[1]}</td><td>${b.n[0]}</td><td><b>${b.ppl}</b></td><td>${fmt(b.cost)}만</td><td>${fmt(r.actCost)}만</td><td>${Math.round(sv*100)}%</td><td>${tag}</td></tr>`;});
+}
+['R','W','K','AC'].forEach(id=>$(id).addEventListener('input',update));
+$('resetBtn').addEventListener('click',()=>{S=JSON.parse(JSON.stringify(DEF));['pay','P','C','fixed','cap'].forEach(k=>{for(let i=0;i<4;i++)$(k+i).value=S[k][i];});$('R').value=5;$('W').value=10;$('K').value=1.5;$('AC').value=actBlend;update();});
+$('AC').value=actBlend;
+buildGrid(); update();
+})();
+</script>
+</body></html>
